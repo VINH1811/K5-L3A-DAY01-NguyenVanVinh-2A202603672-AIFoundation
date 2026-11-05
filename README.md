@@ -1,11 +1,14 @@
 # Bài thực hành Ngày 1 — Một bài toán, bốn thế hệ AI: Lọc tin nhắn rác (Spam / Ham)
 
-<a href="https://colab.research.google.com/github/VinUni-AI20k/K5-L3-Day-01-AI-Foundation-Lab/blob/main/notebooks/day01_spam_ml_dl_embedding_llm.ipynb" target="_blank" rel="noopener noreferrer"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+> **Hình thức: CÁ NHÂN** · **Thời lượng:** 2h30 trên Google Colab · **Deadline:** 23h59 (GMT+7) ngày lab, trừ khi coach thông báo khác
+> **Cần có:** tài khoản GitHub + Google, OpenAI API key cho Phần 4 (không có key vẫn làm được Phần 0–3)
+> **Đọc theo thứ tự:** README → [RULES](RULES.md) → [CHECKPOINTS](CHECKPOINTS.md) → [SUBMISSION](SUBMISSION.md) → [RUBRIC](RUBRIC.md)
 
-[Mở notebook `day01_spam_ml_dl_embedding_llm.ipynb` trên Colab](https://colab.research.google.com/github/VinUni-AI20k/K5-L3-Day-01-AI-Foundation-Lab/blob/main/notebooks/day01_spam_ml_dl_embedding_llm.ipynb)
+<a href="https://colab.research.google.com/github/VinUni-AI20k/K5-L3-Day-01-AI-Foundation-Lab/blob/main/src/day01_spam_ml_dl_embedding_llm.ipynb" target="_blank" rel="noopener noreferrer"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 
-> **Thời lượng:** 2h30 · **Hình thức:** cá nhân, trên Google Colab
-> **Bài nộp:** repository GitHub có thư mục `report/`; chỉ nộp **link repo** trên LMS.
+[Mở notebook `day01_spam_ml_dl_embedding_llm.ipynb` trên Colab](https://colab.research.google.com/github/VinUni-AI20k/K5-L3-Day-01-AI-Foundation-Lab/blob/main/src/day01_spam_ml_dl_embedding_llm.ipynb)
+
+> **Bài nộp:** repository GitHub `K5-L3-DAY01-HoVaTen-MSSV-AIFoundation` có thư mục `report/individual/`; chỉ nộp **link repo** trên LMS (chi tiết: [SUBMISSION.md](SUBMISSION.md)).
 
 Bạn giải **cùng một bài toán** là phân loại SMS thành `spam` hay `ham` (tin bình thường) bằng **4 cách**, theo đúng
 lịch sử AI trong slide Ngày 1. Cuối bài, bạn so sánh 4 cách trên cùng một tập test về chất lượng, tốc độ và chi phí.
@@ -25,7 +28,7 @@ máy học trọng số     đặc trưng          pre-train + gắn "đầu"  c
 | 3 | 1:05 – 1:30 | **Embedding** | Cosine, tìm kiếm theo nghĩa, kNN trên vector của encoder `all-MiniLM-L6-v2` |
 | — | 1:30 – 1:35 | Nghỉ | |
 | 4 | 1:35 – 2:05 | **LLM** | `call_openai` (đúng chữ ký template LLM API), prompt zero/few-shot, đo chi phí |
-| 5 | 2:05 – 2:30 | Tổng hợp | Bảng so sánh, **biểu đồ đánh đổi lỗi ↔ độ trễ**, **stress test 50 case khó**, thử thách cá nhân, nộp bài |
+| 5 | 2:05 – 2:30 | Tổng hợp | Bảng so sánh, **biểu đồ đánh đổi 1 − F1 ↔ độ trễ**, **stress test 50 case khó**, thử thách cá nhân, nộp bài |
 
 ## Mục tiêu học tập
 
@@ -36,7 +39,7 @@ Sau bài thực hành, bạn có thể:
 3. Giải thích vì sao deep learning không phải lúc nào cũng thắng, và đọc được dấu hiệu overfitting.
 4. Giải thích embedding là gì, vì sao nó tổng quát hoá tốt hơn bag-of-words với câu "ngụy trang".
 5. Dùng LLM cho một downstream task: thiết kế prompt, đọc output không chắc chắn, ước tính chi phí theo token.
-6. Chọn phương án cho sản phẩm thật dựa trên số đo (F1, thời gian train, throughput, latency p50/p95, USD/1k tin) và đường Pareto lỗi ↔ độ trễ, không dựa trên cảm giác.
+6. Chọn phương án cho sản phẩm thật dựa trên số đo (F1, thời gian train, throughput, latency p50/p95, USD/1k tin) và đường Pareto (1 − F1) ↔ độ trễ, không dựa trên cảm giác.
 7. Kiểm tra độ bền của model trên các case đánh lừa (spam giọng tự nhiên, thao túng, né từ khoá, prompt injection) và đề xuất cách phòng thủ.
 
 ## Bản chất: từ văn bản đến nhãn, mỗi cách làm gì?
@@ -133,7 +136,7 @@ flowchart LR
 ```mermaid
 flowchart LR
     T["văn bản"] -->|"build_classification_prompt"| PR["Prompt:<br/>'Classify the SMS as spam or ham.<br/>Answer ONE word.<br/>(ví dụ mẫu nếu few-shot)<br/>Message: …  Label:'"]
-    PR -->|"call_openai<br/>temperature=0, max_tokens=3"| API["☁️ LLM (gpt-4o-mini)<br/>sinh từng token tiếp theo"]
+    PR -->|"call_openai<br/>reasoning_effort=none, temperature=0,<br/>max_completion_tokens=3"| API["☁️ LLM (gpt-6-luna)<br/>sinh từng token tiếp theo"]
     API --> R["' Spam.'"]
     R -->|"parse_label"| L["1 = spam · 0 = ham<br/>None = không đọc được"]
 ```
@@ -143,7 +146,8 @@ flowchart LR
 - **Không cần dữ liệu có nhãn:** chỉ cần mô tả nhiệm vụ (zero-shot), hoặc thêm vài ví dụ mẫu vào prompt
   (few-shot). Không có bước train nào.
 - **Cái giá:** mỗi tin là một lần gọi API qua mạng, nên chậm nhất, tốn tiền theo số token, và có khi trả lời "lạc
-  đề". Vì thế cần `temperature=0`, `max_tokens` nhỏ và hàm `parse_label` chịu được lỗi.
+  đề". Vì thế cần `temperature=0`, `max_completion_tokens` nhỏ và hàm `parse_label` chịu được lỗi. Model GPT-6 là
+  *reasoning model*: phải gửi `reasoning_effort="none"`, nếu không 3 token giới hạn bị dùng hết cho suy luận và câu trả lời rỗng.
 - **Trong notebook:** `build_classification_prompt` → `call_openai` (+ `retry_with_backoff`) → `parse_label` →
   `llm_classify_batch`.
 
@@ -187,8 +191,8 @@ Cuối bài (Phần 5), notebook gom mọi phương án vào **một bảng**. M
 | **3a. Encoder (MiniLM) + kNN** | Encoder MiniLM, **đóng băng** → vector 384 chiều | 5 tin train gần nhất bỏ phiếu | ❌ không train gì, chỉ lưu vector của tập train | ❌ | toàn bộ test |
 | **3b. Encoder (MiniLM) + LogReg** | như 3a | Logistic regression của Phần 1 | Chỉ phần LogReg | ❌ | toàn bộ test |
 | **3c. Encoder (MiniLM) + MLP head** | như 3a | MLP của Phần 2 | Chỉ phần MLP (encoder giữ nguyên) | ✅ 64 nơ-ron | toàn bộ test |
-| **4a / 4b. LLM zero-shot** | — | `gpt-4o-mini` / `gpt-4o` đọc prompt | ❌ không train | — | SUB 40 tin |
-| **4c. LLM few-shot** | — | `gpt-4o-mini` + 4 ví dụ mẫu trong prompt | ❌ không train | — | SUB 40 tin |
+| **4a / 4b. LLM zero-shot** | — | `gpt-6-luna` / `gpt-6.1-terra` đọc prompt | ❌ không train | — | SUB 40 tin |
+| **4c. LLM few-shot** | — | `gpt-6-luna` + 4 ví dụ mẫu trong prompt | ❌ không train | — | SUB 40 tin |
 
 Các cặp nên so sánh:
 
@@ -218,7 +222,7 @@ Lưu ý khi so sánh:
 - Số liệu của mỗi người khác nhau, vì cách chia dữ liệu phụ thuộc MSSV và tốc độ phụ thuộc máy Colab (CPU hay GPU).
   README cố ý **không** đưa sẵn kết quả để bạn tự dự đoán trước khi chạy.
 - Chênh lệch F1 nhỏ (khoảng 0.01–0.02) trên vài trăm tin có thể chỉ là ngẫu nhiên. Đừng kết luận phương án nào "thắng"
-  chỉ dựa vào đó.
+  chỉ dựa vào đó. Trên SUB chỉ có 40 tin: 1 tin sai đã đổi F1 vài điểm, nên chênh dưới ~0.05 coi như hoà.
 - Câu hỏi phản ánh cuối bài dùng yêu cầu **p95 < 50 ms/tin** cho 10 triệu SMS/ngày. Hãy xem cột p95 trước,
   sau đó mới chọn theo F1 và chi phí.
 
@@ -228,7 +232,10 @@ Lưu ý khi so sánh:
 5.572 tin nhắn tiếng Anh (747 spam). Notebook tự tải qua `kagglehub` (không cần tài khoản Kaggle); nếu lỗi sẽ tự
 chuyển sang bản gốc trên UCI. Sau khi bỏ 403 tin trùng lặp còn 5.169 tin.
 
-### Bộ test khó: `data/hard_eval_50.csv`
+> **Giới hạn:** notebook chỉ bỏ tin trùng **tuyệt đối**. Các spam mẫu chỉ khác số điện thoại hay mã thưởng vẫn
+> còn, có thể nằm ở cả train lẫn test, nên F1 trên test thường hơi lạc quan. Bộ 50 case khó bên dưới giúp thấy rõ điều đó.
+
+### Bộ test khó: `src/data/hard_eval_50.csv`
 
 50 tin nhắn viết tay để đánh lừa model, có cột `why_tricky` giải thích bẫy của từng case:
 
@@ -251,19 +258,23 @@ Phần 4 không bắt buộc dùng OpenAI. Thêm key vào Colab → 🔑 **Secre
 
 | `LLM_PROVIDER` | Colab Secret | Model lớn / nhỏ mặc định | Cách gọi |
 | --- | --- | --- | --- |
-| `openai` (mặc định) | `OPENAI_API_KEY` | `gpt-4o` / `gpt-4o-mini` | `call_openai` (OpenAI SDK) |
+| `openai` (mặc định) | `OPENAI_API_KEY` | `gpt-6.1-terra` / `gpt-6-luna` | `call_openai` (OpenAI SDK) |
 | `anthropic` | `ANTHROPIC_API_KEY` | `claude-opus-5-5` / `claude-haiku-5-5` | `call_claude` (SDK chính thức `anthropic`) |
-| `gemini` | `GEMINI_API_KEY` | `gemini-2.5-pro` / `gemini-2.5-flash` | `call_openai` + `base_url` Gemini (có gói miễn phí) |
+| `gemini` | `GEMINI_API_KEY` | `gemini-3.8-flash` / `gemini-3.5-flash-lite` | `call_openai` + `base_url` Gemini (có gói miễn phí) |
 | `groq` | `GROQ_API_KEY` | `openai/gpt-oss-120b` / `openai/gpt-oss-20b` | `call_openai` + `base_url` Groq (có gói miễn phí) |
-| `openrouter` | `OPENROUTER_API_KEY` | `openai/gpt-4o` / `openai/gpt-4o-mini` | `call_openai` + `base_url` OpenRouter |
+| `openrouter` | `OPENROUTER_API_KEY` | `openai/gpt-6.1-terra` / `openai/gpt-6-luna` | `call_openai` + `base_url` OpenRouter |
 | `ollama` | — | `llama3.2:3b` / `qwen2.5:0.5b` | `call_openai` + `base_url` local (chạy trên máy cá nhân) |
 
 - Đúng như slide 21, phần lớn engine nói chuẩn **OpenAI-compatible API**, nên chỉ cần đổi `base_url`; hàm `call_openai` của
   học viên (giữ chữ ký template) không đổi. Claude được gọi bằng SDK `anthropic` qua hàm có sẵn `call_claude`. Hàm `call_llm`
   tự chọn đúng đường theo `LLM_PROVIDER`.
 - Tên model thay đổi nhanh. Nếu gặp lỗi *model not found*, chạy ô `list_models()` rồi sửa `PROVIDERS[...]`.
-- Model suy luận (Gemini 2.5, gpt-oss) và Claude cần `max_tokens` lớn hơn (512–1024) để còn chỗ cho phần "suy nghĩ"; bảng
+- Model suy luận (Gemini 3, gpt-oss) và Claude cần `max_tokens` lớn hơn (512–1024) để còn chỗ cho phần "suy nghĩ"; bảng
   `PROVIDERS` đã đặt sẵn.
+- Mỗi provider tắt/giảm phần "suy nghĩ" bằng tham số khác nhau (OpenAI `reasoning_effort="none"` + `max_completion_tokens`,
+  Groq `reasoning_effort="low"`, OpenRouter `reasoning.effort`). Cột `token_param` / `params` trong `PROVIDERS` ghi sẵn; hàm
+  `provider_kwargs(max_tokens)` trả về đúng bộ tham số, `call_openai` chỉ cần thêm `**provider_kwargs(max_tokens)`.
+- `gemini-2.5-pro` / `-flash` bị Google tắt ngày 01/12/2026, nên bảng dùng dòng Gemini 3.
 - Giá trong `PRICE_PER_1M` là giá tham khảo; model chưa có giá được tính 0 USD. Tự điền giá hiện hành nếu cần so chi phí.
 - Stress test có thêm phương án **4d. LLM + prompt phòng thủ** (`build_defended_prompt`): tin nhắn được đặt trong thẻ `<sms>` và
   được coi là dữ liệu, không phải chỉ dẫn, để so với prompt thường trên nhóm *prompt injection*.
@@ -294,7 +305,7 @@ Phần 4 không bắt buộc dùng OpenAI. Thêm key vào Colab → 🔑 **Secre
 ### Bước 1: Tạo repository bài làm từ template
 
 Mở repository này, nhấn **Use this template → Create a new repository**. Chọn tài khoản GitHub của bạn làm owner,
-đặt tên theo mẫu `<KHOA>-DAY01-HoVaTen-MSSV` (ví dụ `K5-DAY01-NguyenVanAn-12345678`) và chọn **Public** để Lab
+đặt tên theo mẫu `K5-L3-DAY01-HoVaTen-MSSV-AIFoundation` (ví dụ `K5-L3-DAY01-NguyenVanAn-2A20260000-AIFoundation`) và chọn **Public** để Lab
 Coach mở được link nộp. Không chọn **Include all branches**.
 
 ### Bước 2: Mở notebook bằng Google Colab
@@ -310,27 +321,29 @@ kèm gợi ý khi sai. Nếu runtime bị ngắt, chọn **Runtime → Run all**
 ### Bước 4: Đưa bài vào repo
 
 Chạy ô **Báo cáo cuối** (tự tải `lab1_report.json`), rồi tải notebook đã chạy (**File → Download → .ipynb**, đổi
-tên thành `day01_lab.ipynb`). Trên GitHub, mở thư mục `report/` → **Add file → Upload files** → kéo 3 file vào →
-**Commit changes**.
+tên thành `day01_lab.ipynb`). Trên GitHub, mở thư mục `report/individual/` → **Add file → Upload files** → kéo 3 file
+vào → **Commit changes**. Đổi tên `report/individual/MSSV_HoTen.md` theo MSSV và họ tên của bạn rồi điền báo cáo.
 
 ### Bước 5: Nộp link
 
-Tải lại trang GitHub, kiểm tra `report/` đủ 3 file, rồi nộp **link repository** trên LMS.
+Tải lại trang GitHub, kiểm tra `report/individual/` đủ 4 file (báo cáo `.md` + 3 file trên), rồi nộp **link repository** trên LMS trước deadline.
 
 ## Cấu trúc bài nộp
 
 ```text
-<KHOA>-DAY01-HoVaTen-MSSV/
+K5-L3-DAY01-HoVaTen-MSSV-AIFoundation/
 └── report/
-    ├── day01_lab.ipynb      # notebook đã chạy, đã điền câu trả lời
-    ├── lab1_report.json     # do ô "Báo cáo cuối" sinh ra (checks, dự đoán, kết quả, SEED)
-    └── hand_calc.jpg        # ảnh tờ giấy tính tay
+    └── individual/
+        ├── MSSV_HoTen.md        # báo cáo cá nhân (đổi tên, vd 2A20260000_NguyenVanAn.md)
+        ├── day01_lab.ipynb      # notebook đã chạy, đã điền câu trả lời
+        ├── lab1_report.json     # do ô "Báo cáo cuối" sinh ra (checks, dự đoán, kết quả, SEED)
+        └── hand_calc.jpg        # ảnh tờ giấy tính tay
 ```
 
 Nếu đã quen Git trên máy:
 
 ```bash
-git add report
+git add report/individual
 git commit -m "submit day 1 lab"
 git push
 ```
@@ -350,39 +363,55 @@ git push
 
 ## Quy tắc quan trọng
 
+Đầy đủ trong [RULES.md](RULES.md). Tóm tắt:
+
 - **Không bao giờ** commit API key. Kiểm tra notebook trước khi upload.
-- Không ghi họ tên, email, số điện thoại vào notebook hoặc report. MSSV chỉ dùng làm `STUDENT_ID` để tạo seed;
-  `lab1_report.json` chỉ lưu `SEED`.
-- Phần 4 tốn tiền thật nhưng rất ít (dưới $0.05 cho cả bài với `gpt-4o-mini` + 40 tin của `gpt-4o`). Không tự tăng
-  số tin gửi lên LLM.
+- Không ghi email, số điện thoại vào notebook hoặc report. Họ tên chỉ nằm ở tên repo và tên file báo cáo. MSSV chỉ
+  dùng làm `STUDENT_ID` để tạo seed; `lab1_report.json` chỉ lưu `SEED`.
+- Phần 4 tốn tiền thật nhưng rất ít (dưới $0.01 cho cả bài với `gpt-6-luna` + 40 tin của `gpt-6.1-terra`, giá 11/2026).
+  Không tự tăng số tin gửi lên LLM.
 - Mô hình dự đoán sai không làm bài kém đi. Phân tích lỗi đúng cách là bằng chứng có giá trị.
 
 ## Tệp trong repository
 
 | Tệp | Dùng để làm gì |
 | --- | --- |
-| `notebooks/day01_spam_ml_dl_embedding_llm.ipynb` | notebook bài lab (làm trên Colab) |
-| `data/hard_eval_50.csv` | 50 case khó để stress test (đã nhúng sẵn trong notebook) |
-| `RUBRIC.md` | tiêu chí chấm điểm |
-| `report/` | thư mục học viên upload bài làm |
-| `requirements.txt` | thư viện nếu muốn chạy trên máy cá nhân |
+| `RULES.md` · `CHECKPOINTS.md` · `SUBMISSION.md` · `RUBRIC.md` | luật, mốc kiểm tra, cách nộp, tiêu chí chấm |
+| `src/day01_spam_ml_dl_embedding_llm.ipynb` | notebook bài lab (làm trên Colab) — xem [src/README.md](src/README.md) |
+| `src/data/hard_eval_50.csv` | 50 case khó để stress test (đã nhúng sẵn trong notebook) |
+| `src/requirements.txt` | thư viện nếu muốn chạy trên máy cá nhân |
+| `src/optional_llm_api/` | side lab LLM API tuỳ chọn (bonus) |
+| `docs/` | tài liệu dài: bài tập side lab — xem [docs/README.md](docs/README.md) |
+| `report/individual/` | thư mục học viên upload bài làm (có sẵn mẫu `MSSV_HoTen.md`) |
 | `tests/test_repository_contract.py` | kiểm tra notebook hợp lệ, sạch output, đủ TODO |
+| `tests/test_solution.py` | test (dùng mock) cho side lab; tự bỏ qua khi chưa có bài làm |
+| `.env.example` | mẫu biến môi trường khi chạy trên máy; **không** commit `.env` |
 | `THIRD_PARTY_NOTICES.md` | nguồn và license của dữ liệu, model |
 
 ## Nguồn
 
 - Almeida, T. A., Hidalgo, J. M. G., & Yamakami, A. (2011). *Contributions to the Study of SMS Spam Filtering.* — [UCI SMS Spam Collection](https://archive.ics.uci.edu/dataset/228/sms+spam+collection)
 - [Sentence-Transformers `all-MiniLM-L6-v2`](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
-- [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat)
+- [OpenAI Chat Completions API](https://developers.openai.com/api/docs/api-reference/chat)
+- [OpenAI — Deprecations](https://developers.openai.com/api/docs/deprecations): `gpt-4o`, `gpt-4o-mini`, `gpt-4.1-mini` bị gỡ khỏi API ngày 14/01/2027; lab dùng `gpt-6-luna` / `gpt-6.1-terra`.
+- [OpenAI — Pricing](https://developers.openai.com/api/docs/pricing) (giá trong notebook lấy 11/2026; kiểm tra lại trước buổi lab).
+- [Google AI Studio — Deprecations](https://aistudio.google.com/docs/deprecations): `gemini-2.5-pro` / `-flash` tắt ngày 01/12/2026.
+- [Google AI Studio — Pricing](https://aistudio.google.com/docs/pricing): `gemini-3.8-flash` $0.75 / $3.75 mỗi 1M token (tăng lên $1.50 / $7.50 từ 01/01/2027), `gemini-3.5-flash-lite` $0.30 / $2.50.
+- [Groq — Reasoning](https://console.groq.com/docs/reasoning): `reasoning_effort` của gpt-oss chỉ nhận `low` / `medium` / `high`.
+- [OpenRouter — Reasoning tokens](https://openrouter.ai/docs/use-cases/reasoning-tokens): tham số `reasoning.effort`.
 
-## Bài phụ: LLM API (`template.py`)
+## Bài phụ (tuỳ chọn, bonus): LLM API — `src/optional_llm_api/`
 
-Phần 4 của notebook dùng đúng chữ ký hàm của bài LLM API trong `template.py` (`call_openai`, `call_openai_mini`,
-`compare_models`, `streaming_chatbot`, `retry_with_backoff`, ...). Nếu GV giao thêm bài này để làm trên máy:
+Phần 4 của notebook dùng đúng chữ ký hàm của bài LLM API trong `src/optional_llm_api/template.py` (`call_openai`,
+`call_openai_mini`, `compare_models`, `streaming_chatbot`, `retry_with_backoff`). Side lab này **không** thuộc điểm
+chính; làm thì được tính bonus theo [RUBRIC.md](RUBRIC.md). Chạy trên máy, từ gốc repo:
 
 ```bash
-pip install -r requirements.txt
-mkdir -p solution && cp template.py solution/solution.py   # rồi hoàn thiện các TODO
-cp exercises.md solution/exercises.md                      # điền phần phản ánh
-pytest tests/test_solution.py -v                           # test dùng mock, không cần API key
+python -m pip install -r src/requirements.txt
+mkdir -p src/optional_llm_api/solution
+cp src/optional_llm_api/template.py src/optional_llm_api/solution/solution.py   # rồi hoàn thiện các TODO
+pytest tests/test_solution.py -v                                                # test dùng mock, không cần API key
 ```
+
+Câu hỏi phản ánh của side lab nằm ở [docs/optional-llm-api-exercises.md](docs/optional-llm-api-exercises.md).
+Tên khoá `gpt4o_*` / `mini_*` trong kết quả là hợp đồng của test, giữ nguyên để tương thích: đọc là "model lớn" / "model nhỏ".

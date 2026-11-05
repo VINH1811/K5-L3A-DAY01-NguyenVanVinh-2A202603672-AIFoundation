@@ -4,7 +4,9 @@
 
 ## SMS Spam Collection dataset
 
-The notebook downloads the dataset at runtime; no data file is committed to this repository.
+The notebook downloads the SMS Spam Collection at runtime; no copy of that dataset is committed to this repository.
+
+The one committed data file, `src/data/hard_eval_50.csv` (50 hard test messages), was written by hand for this lab. It is original and not taken from the SMS Spam Collection; it ships under the same terms as the rest of this repository.
 
 - Primary source: Kaggle mirror `uciml/sms-spam-collection-dataset` — <https://www.kaggle.com/datasets/uciml/sms-spam-collection-dataset>
 - Fallback source: UCI Machine Learning Repository — <https://archive.ics.uci.edu/dataset/228/sms+spam+collection>

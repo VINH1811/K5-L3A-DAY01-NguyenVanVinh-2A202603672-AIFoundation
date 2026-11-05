@@ -2,20 +2,25 @@
 Day 1 — LLM API Foundation
 Test suite for student solution.
 
-Run from the day folder:
-    pytest tests/ -v
+Run from the repo root (after creating src/optional_llm_api/solution/solution.py):
+    pytest tests/test_solution.py -v
 
 All external API calls are mocked — no real API keys required.
 """
 
 import importlib.util
+import os
 import sys
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 DAY_DIR = Path(__file__).parent.parent
-SOLUTION_DIR = DAY_DIR / "solution"
+LAB_DIR = DAY_DIR / "src" / "optional_llm_api"
+SOLUTION_DIR = LAB_DIR / "solution"
+
+# Client OpenAI chỉ được tạo trong mock, nhưng SDK đòi key khi khởi tạo nếu mock bị lọt.
+os.environ.setdefault("OPENAI_API_KEY", "sk-test-not-a-real-key")
 
 
 def _load(path: Path, unique_name: str):
@@ -26,18 +31,38 @@ def _load(path: Path, unique_name: str):
     return mod
 
 
-if (SOLUTION_DIR / "solution.py").exists():
-    _m = _load(SOLUTION_DIR / "solution.py", f"{DAY_DIR.name}.solution")
-elif (SOLUTION_DIR / "app.py").exists():
-    _m = _load(SOLUTION_DIR / "app.py", f"{DAY_DIR.name}.solution")
-else:
-    src = "template.py" if (DAY_DIR / "template.py").exists() else "app.py"
-    _m = _load(DAY_DIR / src, f"{DAY_DIR.name}.template")
+_entry = next((SOLUTION_DIR / n for n in ("solution.py", "app.py") if (SOLUTION_DIR / n).exists()), None)
 
-call_openai = getattr(_m, 'call_openai')
-call_openai_mini = getattr(_m, 'call_openai_mini')
-compare_models = getattr(_m, 'compare_models')
-streaming_chatbot = getattr(_m, 'streaming_chatbot')
+if _entry is None:
+    # Side lab tuỳ chọn: chưa có bài làm thì bỏ qua cả file (template chỉ có NotImplementedError).
+    _SKIP_MSG = f"Chưa có {SOLUTION_DIR.relative_to(DAY_DIR)}/solution.py — side lab tuỳ chọn, bỏ qua."
+    if "pytest" in sys.modules:
+        import pytest
+
+        pytest.skip(_SKIP_MSG, allow_module_level=True)
+
+    def load_tests(loader, tests, pattern):
+        @unittest.skip(_SKIP_MSG)
+        class SideLabNotStarted(unittest.TestCase):
+            def test_side_lab(self):
+                pass
+
+        return loader.loadTestsFromTestCase(SideLabNotStarted)
+
+    _m = call_openai = call_openai_mini = compare_models = streaming_chatbot = None
+else:
+    # Tên module không được chứa dấu chấm: patch("a.b.call_openai") sẽ đi import package "a".
+    _m = _load(_entry, "day01_student_solution")
+
+    # Bài làm viết `from openai import OpenAI` ở đầu file thì @patch("openai.OpenAI") không chạm tới tên đó.
+    # Trỏ tên trong module về openai.OpenAI lúc GỌI, để mock của từng test luôn có hiệu lực.
+    if hasattr(_m, "OpenAI"):
+        _m.OpenAI = lambda *args, **kwargs: __import__("openai").OpenAI(*args, **kwargs)
+
+    call_openai = getattr(_m, "call_openai")
+    call_openai_mini = getattr(_m, "call_openai_mini")
+    compare_models = getattr(_m, "compare_models")
+    streaming_chatbot = getattr(_m, "streaming_chatbot")
 
 
 def _make_openai_response(text: str = "Hello from OpenAI"):

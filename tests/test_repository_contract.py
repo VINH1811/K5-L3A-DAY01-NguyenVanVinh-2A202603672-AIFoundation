@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-NOTEBOOK_PATH = ROOT / "notebooks" / "day01_spam_ml_dl_embedding_llm.ipynb"
+NOTEBOOK_PATH = ROOT / "src" / "day01_spam_ml_dl_embedding_llm.ipynb"
 
 STUDENT_TODOS = [
     "vectorize",
@@ -89,7 +89,7 @@ class RepositoryContractTest(unittest.TestCase):
     def test_hard_eval_dataset_is_complete_and_embedded(self):
         import csv
         from collections import Counter
-        with open(ROOT / "data" / "hard_eval_50.csv", encoding="utf-8") as f:
+        with open(ROOT / "src" / "data" / "hard_eval_50.csv", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
         self.assertEqual(len(rows), 50)
         self.assertEqual([int(r["id"]) for r in rows], list(range(1, 51)))
@@ -114,7 +114,7 @@ class RepositoryContractTest(unittest.TestCase):
         self.assertIn("import anthropic", claude_src)
         self.assertNotIn("temperature=", claude_src)
         self.assertIn('fallbacks="default"', claude_src)
-        self.assertIn("anthropic", self.code_source.splitlines()[0] + (ROOT / "requirements.txt").read_text())
+        self.assertIn("anthropic", self.code_source.splitlines()[0] + (ROOT / "src" / "requirements.txt").read_text())
 
 
 if __name__ == "__main__":
